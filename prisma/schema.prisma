@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  name                String
+  email               String               @unique
+  password            String?
+  createdAt           DateTime             @default(now())
+  conversationMembers ConversationMember[]
+  messages            Message[]
+  messageStatuses     MessageStatus[]
+  messageHiddens      messageHidden[]
+
+  @@index([email])
+}
+
+model Conversation {
+  id                  String               @id @default(uuid())
+  isGroup             Boolean              @default(false)
+  title               String?
+  conversationMembers ConversationMember[]
+  createdAt           DateTime             @default(now())
+  messages            Message[]
+  updatedAt           DateTime             @updatedAt
+}
+
+model ConversationMember {
+  id             String           @id @default(uuid())
+  conversation   Conversation?    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String?
+  user           User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String?
+  role           ConversationRole @default(MEMBER)
+  joinAt         DateTime         @default(now())
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id              String          @id @default(uuid())
+  content         String?
+  sender          User?           @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId        String?
+  conversation    Conversation?   @relation(fields: [conversationId], references: [id])
+  conversationId  String?
+  createdAt       DateTime        @default(now())
+  type            MessageType     @default(TEXT)
+  isDeletedForEveryOne  Boolean @default(false)
+  attachments     Attachment[]
+  messageStatuses MessageStatus[]
+  messageHiddens  messageHidden[]
+}
+
+model Attachment {
+  id String @id @default(uuid())
+
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String?
+  url       String
+  type      String
+  size      Int?
+}
+
+model MessageStatus {
+  id        String     @id @default(uuid())
+  messageId String
+  userId    String
+  status    SeenStatus @default(SENT)
+  updatedAt DateTime   @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+}
+
+model messageHidden {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([userId,messageId])
+}
+
+enum ConversationRole {
+  ADMIN
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  AUDIO
+  VIDEO
+}
+
+enum SeenStatus {
+  SENT
+  DELIVERED
+  SEEN
+}
