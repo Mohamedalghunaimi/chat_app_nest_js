@@ -197,7 +197,9 @@ export class MessageService {
         }
     }
 
-    public async getMessages(conversationId:string,userId:string) {
+    public async getMessages(conversationId:string,userId:string,limit:number,page:number) {
+        const skip = (page-1)*limit ;
+        
         const conversation = await this.prisma.conversation.findUnique({
             where:{
                 id:conversationId
@@ -221,6 +223,8 @@ export class MessageService {
             throw new BadRequestException("user is not member")
         }
         const messages  = await this.prisma.message.findMany({
+            skip,
+            take:limit,
             where:{
                 conversationId,
                 messageHiddens:{
